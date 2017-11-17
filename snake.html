@@ -1,0 +1,184 @@
+<!DOCTYPE html>  
+<html lang="en">
+   
+<head>  
+    <meta charset="UTF-8" />
+    <title>Snake Game</title>  
+    <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.7.1/jquery.min.js" type="text/javascript"></script>  
+
+    <!-- js to control the process of game -->
+    <script>  
+        $(document).ready(function () {  
+            // find the canvas element
+            var drawCanvas = document.getElementById("canvas");
+            // a drawing object for the canvas
+            var context = drawCanvas.getContext("2d"); 
+            context.font="20px Georgia"; 
+            // get the width and height of the canvas
+            var width = $("#canvas").width();    // 500px
+            var height = $("#canvas").height();  // 500px
+   
+            var cellWidth = 10;  
+            var direction;  
+            var snakeFoodX, snakeFoodY;  
+            var score;  
+            var snakeArr;
+            var game;
+            var speed, level;
+
+            // game start 
+            function start() {  
+                direction = "right"; // initial direction is right 
+                createSnake();  
+                createFood();  
+                score = 0; 
+                level = 0; 
+                speed = 200;
+                // draw the new snake according to the speed
+                game = setInterval(snakeMove, speed); 
+            }  
+            start();  
+            
+            // create the snake with size of 4 (start from up left corner of the canvas) when game starts
+            function createSnake() {  
+                var snakeSize = 4;  
+                snakeArr = [];  
+                for (var i = 0; i < snakeSize; i++) {  
+                    snakeArr.unshift({ x : i , y : 0});  
+                }  
+            }  
+            
+            // create a food at random position on the canvas
+            function createFood() {  
+                snakeFoodX = Math.round(Math.random() * (width - cellWidth) / cellWidth);
+                snakeFoodY = Math.round(Math.random() * (height - cellWidth) / cellWidth);
+             }  
+            
+            // draw the snake on the canvas after the snake moves
+            function snakeMove() {  
+                // fill the canvas with white background
+                context.fillStyle = "#ffffff";  
+                context.fillRect(0, 0, width, height); 
+                // add black border to the canvas 
+                context.strokeStyle = "#000000";  
+                context.strokeRect(0, 0, width, height);  
+                
+                // get the head of the snake
+                var x = snakeArr[0].x;  
+                var y = snakeArr[0].y;  
+   
+                if (direction === "right") {
+                    // move right
+                    x++;
+                } else if (direction === "left") {
+                    // move left
+                    x--;
+                } else if (direction === "down") {
+                    // move down
+                    y++;
+                } else if (direction === "up") {
+                    // move up
+                    y--;
+                } 
+                 
+                // if the snake touches the left/right/up/bottom border of the canvas or the head of snake touch its body, gameover, restart the game
+                if (x === -1 || x === Math.round(width / cellWidth) || y === -1 || y === Math.round(height / cellWidth) || checkTouchBody(x, y, snakeArr)) {
+                    clearInterval(game);
+                    start();  
+                    return;  
+                }  
+                
+                if (x === snakeFoodX && y === snakeFoodY) {  
+                    // if the snake eats the food at this move, add the new position as the snake head at the beginning of the snakeArr
+                    // the length of snake increase by 1, update the score and paint a new food
+                    var newHead = {x : x, y : y};  
+                    score++;  
+                    createFood();  
+                } else {  
+                    // if the snake does not eat the food at this move, move the snake one cell on the current direction
+                    snakeArr.pop();
+                    var newHead = {x : x, y : y};     
+                }  
+                snakeArr.unshift(newHead);
+
+                // paint the score
+                var score_text = "Score: " + score;  
+                context.fillStyle = "#000000";  
+                context.fillText(score_text, width - 100, 20); 
+
+                // increase moving speed every 20 points
+                if (Math.round(score / 20) > level) {
+                    level++;
+                    clearInterval(game);
+                    speed -= 10;
+                    game = setInterval(snakeMove, speed); 
+                }
+   
+                // paint the snake with the snakeArr after one move
+                for (var i = 0; i < snakeArr.length; i++) {  
+                    var pos = snakeArr[i];  
+                    paint(pos.x, pos.y, "snake");  
+                } 
+                // paint the food
+                paint(snakeFoodX, snakeFoodY, "food");  
+            }  
+
+            // check if the snake collision with its body during moving
+            function checkTouchBody(x, y, array) {  
+                for (var i = 0; i < array.length; i++) {  
+                    if (array[i].x === x && array[i].y === y) {
+                        return true;  
+                    }
+                }  
+                return false;  
+            }  
+            
+            // paint the food and snake with different color (snake: green, food: red)
+            function paint(x, y, type) {  
+                if (type === "snake") {
+                    context.fillStyle = "green";  
+                    context.fillRect(x * cellWidth, y * cellWidth, cellWidth, cellWidth);  
+                    context.strokeStyle = "green";  
+                    context.strokeRect(x * cellWidth, y * cellWidth, cellWidth, cellWidth);  
+                } else if (type === "food") {
+                    context.fillStyle = "red";  
+                    context.fillRect(x * cellWidth, y * cellWidth, cellWidth, cellWidth);  
+                    context.strokeStyle = "red";  
+                    context.strokeRect(x * cellWidth, y * cellWidth, cellWidth, cellWidth);  
+                }
+            }  
+            
+            // add eventListener on the direction key down to change the direction of snake
+            document.addEventListener("keydown", function(event) {
+                var input = event.which;  
+                if (input == "40" && direction !== "up") {
+                    // if down key is pressed and the previous direction is not up
+                    direction = "down";
+                } else if (input == "39" && direction !== "left") {
+                    // if right key is pressed and the previous direction is not left
+                    direction = "right";  
+                } else if (input == "38" && direction !== "down") {
+                    // if up key is pressed and the previous direction is not down
+                    direction = "up"; 
+                } else if (input == "37" && direction !== "right") {
+                    // if left key is pressed and the previous direction is not right
+                    direction = "left";  
+                }
+            }, false);
+
+            // restart game when refresh button is pressed
+            document.getElementById("refresh").addEventListener("click", function() {
+                clearInterval(game);
+                start();  
+            });
+        })  
+    </script>  
+</head> 
+
+<body>  
+    <div>
+        <canvas id="canvas" width="500" height="500" ></canvas>  
+    </div>
+    <button id="refresh">Refresh</button>
+</body>  
+</html>
